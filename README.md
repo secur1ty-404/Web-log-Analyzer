@@ -4,7 +4,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![PRs Welcome](https://img.shields.io/badge/PRs-%E6%AC%A2%E8%BF%8E%E6%8F%90%E4%BA%A4-brightgreen.svg)](https://github.com/yourname/web-log-analyzer/pulls)
 
-![GUI界面截图](![image](https://github.com/user-attachments/assets/935ab7c7-bef0-4f86-b21e-ce5ac29c876d)
+![GUI界面截图](![image](https://github.com/M1nkit/Web-log-Analyzer/blob/main/template.png)
 )
 
 > 一款高效的Web服务器日志图形化分析工具，支持多条件组合查询与智能过滤
@@ -14,8 +14,7 @@
 - [快速开始](#快速开始)
 - [使用指南](#使用指南)
 - [注意事项](#注意事项)
-- [开发路线](#开发路线)
-- [参与贡献](#参与贡献)
+- [注意事项](#)
 - [许可证](#许可证)
 
 ## 功能特性 🚀
@@ -81,11 +80,6 @@ A：建议使用以下命令预处理日志：
 split -b 100M access.log access_part_
 Q：时间过滤不生效？
 A：请检查时区设置，示例日志使用+0800时区，工具会自动转换UTC时间
-参与贡献 🤝
-欢迎通过以下方式参与项目：
-提交Issues 反馈问题
-Fork仓库并提交Pull Request
-完善文档或翻译多语言版本
 许可证 📜
 本项目采用 MIT License，您可以在遵守许可条款的前提下自由使用。
 星光不问赶路人，时光不负有心人 ✨
