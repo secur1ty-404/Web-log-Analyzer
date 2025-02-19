@@ -2,7 +2,7 @@
 
 [![Python 3.8+](https://img.shields.io/badge/python-3.8%2B-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![PRs Welcome](https://img.shields.io/badge/PRs-%E6%AC%A2%E8%BF%8E%E6%8F%90%E4%BA%A4-brightgreen.svg)](https://github.com/yourname/web-log-analyzer/pulls)
+[![PRs Welcome](https://img.shields.io/badge/PRs-%E6%AC%A2%E8%BF%8E%E6%8F%90%E4%BA%A4-brightgreen.svg)](https://github.com/m1nkit/web-log-analyzer/pulls)
 
 
 > 一款高效的Web服务器日志图形化分析工具，用于个人在应急响应中对Web服务器access日志的查询分析，支持多条件组合查询与智能过滤
