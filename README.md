@@ -5,7 +5,7 @@
 [![PRs Welcome](https://img.shields.io/badge/PRs-%E6%AC%A2%E8%BF%8E%E6%8F%90%E4%BA%A4-brightgreen.svg)](https://github.com/yourname/web-log-analyzer/pulls)
 
 
-> 一款高效的Web服务器日志图形化分析工具，支持多条件组合查询与智能过滤
+> 一款高效的Web服务器日志图形化分析工具，用于个人在应急响应中对Web服务器access日志的查询分析，支持多条件组合查询与智能过滤
 
 ## 目录 📚
 
@@ -131,5 +131,6 @@ Fork仓库并提交Pull Request
 ## 许可证 📜
 
 本项目采用 MIT License，您可以在遵守许可条款的前提下自由使用。
+
 星光不问赶路人，时光不负有心人 ✨
 持续优化中，期待您的✨星星✨支持！
