@@ -69,7 +69,7 @@ python main.py
 
 3. 结果展示区：支持复制选中内容，结果自动导出为文件并会自动更新
 
-典型场景
+### 典型场景
 场景1：检测异常登录
 
 1. 关键词：admin,login
@@ -82,7 +82,7 @@ python main.py
 2. 状态码：206（部分内容）
 3. 端口：8080,8090
 
-##### 界面布局截图 
+### 界面布局截图 
 
 [![GUI界面截图](https://raw.githubusercontent.com/M1nkit/Web-log-Analyzer/main/template.png)](https://raw.githubusercontent.com/M1nkit/Web-log-Analyzer/main/template.png)
 
