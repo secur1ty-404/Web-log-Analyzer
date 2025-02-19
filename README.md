@@ -51,7 +51,7 @@ git clone https://github.com/m1nkit/web-log-analyzer.git
 pip install -r requirements.txt
 
 # 启动程序
-python main.py
+python Analyzer.py
 
 ```
 
