@@ -1,11 +1,9 @@
 # main.py
-#Author minkit
 import os
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 import re
 from datetime import datetime, timedelta
-
 import pytz
 from AutocompleteEntry import AutocompleteEntry
 
@@ -55,23 +53,31 @@ class LogAnalyzerApp:
         self.lbl_ip = ttk.Label(self.frame_conditions, text="访问IP地址:")
         self.entry_ip = ttk.Entry(self.frame_conditions)
 
-        self.lbl_backend_ports = ttk.Label(self.frame_conditions, text="后端端口（多个用,分隔）:")
+        self.lbl_backend_ports = ttk.Label(self.frame_conditions, text="端口（多个用,分隔）:")
         self.entry_backend_ports = ttk.Entry(self.frame_conditions)
 
         self.lbl_status = ttk.Label(self.frame_conditions, text="状态码（如 200,404）:")
         self.entry_status = ttk.Entry(self.frame_conditions)
 
         # 时间范围分为开始和结束时间
-        self.lbl_time_start = ttk.Label(self.frame_conditions, text="开始时间（YYYY-MM-DD HH:MM:SS）:")
+        self.lbl_time_start = ttk.Label(self.frame_conditions, text="开始时间（格式：YYYY-MM-DD HH:MM:SS）:")
         self.entry_time_start = ttk.Entry(self.frame_conditions)
-        self.lbl_time_end = ttk.Label(self.frame_conditions, text="结束时间（YYYY-MM-DD HH:MM:SS）:")
+        self.lbl_time_end = ttk.Label(self.frame_conditions, text="结束时间（当前为UTC时间，北京时间需减8小时）:")
         self.entry_time_end = ttk.Entry(self.frame_conditions)
 
         self.lbl_range = ttk.Label(self.frame_conditions, text="行数范围（如 1-1000）:")
         self.entry_range = ttk.Entry(self.frame_conditions)
 
-        self.btn_analyze = ttk.Button(self.frame_conditions, text="开始分析", command=self.analyze_log)
+        # 修改按钮布局部分
+        self.btn_frame = ttk.Frame(self.frame_conditions)  # 新增按钮容器
 
+        self.btn_analyze = ttk.Button(self.btn_frame, text="开始分析", command=self.analyze_log)
+        self.btn_analyze.pack(side=tk.LEFT, padx=5, pady=5, fill=tk.X, expand=True)
+
+        # 新增IP汇总按钮
+        self.btn_ip_summary = ttk.Button(self.btn_frame,text="开始汇总IP",command=self.summarize_ips  # 绑定新方法
+        )
+        self.btn_ip_summary.pack(side=tk.LEFT, padx=5, pady=5, fill=tk.X, expand=True)
         # 网格布局
         rows = [
             (self.lbl_keyword, None),
@@ -94,8 +100,13 @@ class LogAnalyzerApp:
                 entry.grid(row=row_counter, column=1, sticky=tk.EW, padx=5, pady=2)
             row_counter += 1
 
-        # 分析按钮位置
-        self.btn_analyze.grid(row=row_counter, columnspan=2, pady=10)
+        # 分析按钮位置(单个分析按钮布局已废弃)
+        #self.btn_analyze.grid(row=row_counter, columnspan=2, pady=10)
+
+        # 将按钮容器放置到网格布局
+        self.btn_frame.grid(row=row_counter, columnspan=2, pady=10, sticky=tk.EW)
+
+
 
         # 框架布局
         self.frame_conditions.grid_columnconfigure(1, weight=1)
@@ -163,6 +174,54 @@ class LogAnalyzerApp:
                 f.write('\n'.join(self.search_history[-100:]))  # 最多保留100条
         except:
             pass
+
+    def summarize_ips(self):
+       # 新增IP汇总按钮
+        if not self.log_lines:
+            messagebox.showwarning("警告", "请先上传日志文件")
+            return
+
+        # 使用集合自动去重
+        unique_ips = set()
+        log_pattern = re.compile(
+            r'^(\S+)\s+\S+\s+\[([^]]+)\]\s+(\d+)\s+\d+\.\d+\s+\d+\s+(\S+)\s+(\S+)\s+(\S+):(\d+)\s+(\d+)\s+".*?"\s+\d+\.\d+$'
+        )
+
+        for line in self.log_lines:
+            match = log_pattern.match(line.strip())
+            if match:
+                ip = match.group(5)  # 第5组为访问IP
+                unique_ips.add(ip)
+
+        if not unique_ips:
+            self.text_result.delete(1.0, tk.END)
+            self.text_result.insert(tk.END, "未找到有效IP地址")
+            return
+
+        # 对IP进行排序（简单字符串排序）
+        sorted_ips = sorted(unique_ips, key=lambda ip: [int(part) for part in ip.split('.')])
+
+        # 构建结果字符串
+        result = f"发现 {len(sorted_ips)} 个IP地址：\n\n"
+        result += "\n".join(sorted_ips)
+
+        # 更新界面显示
+        self.text_result.delete(1.0, tk.END)
+        self.text_result.insert(tk.END, result)
+
+        # 生成IP.txt文件
+        try:
+            ip_filename = "IP.txt"
+            with open(ip_filename, "w", encoding="utf-8") as f:
+                f.write("\n".join(sorted_ips))
+
+            # 更新状态显示
+            self.lbl_upload_status.config(
+                text=f"IP列表已保存到：{os.path.abspath(ip_filename)}",
+                foreground="blue"
+            )
+        except Exception as e:
+            messagebox.showerror("保存失败", f"无法写入IP.txt文件：{str(e)}")
 
     def setup_default_time(self):
         # 设置默认时间范围（最近24小时）
@@ -377,6 +436,7 @@ class LogAnalyzerApp:
         if self.last_result:
             self.save_result(on_exit=True)
         self.root.destroy()
+
 
 
 if __name__ == "__main__":
