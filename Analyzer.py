@@ -23,6 +23,8 @@ class LogAnalyzerApp:
         self.create_widgets()
         self.setup_autocomplete()
         self.setup_default_time()
+        self.setup_default_status()
+        self.setup_default_range()
         self.setup_text_tags()
 
         # 绑定窗口关闭事件
@@ -32,7 +34,7 @@ class LogAnalyzerApp:
         # 配置文本标签样式
         self.text_result.tag_configure("bold", font=('TkDefaultFont', 10, 'bold'))
 
-    def upload_log(self):
+    def upload_log_file(self):
         filetypes = [
             ("所有日志文件", "*.log;*.txt"),
             ("Nginx日志", "*.log"),
@@ -191,6 +193,7 @@ class LogAnalyzerApp:
                 self.lbl_upload_status.config(text=status_msg, foreground="green")
             except Exception as e:
                 self.lbl_upload_status.config(text=f"加载失败: {str(e)}", foreground="red")
+                
 
     def setup_autocomplete(self):
         # 配置自动完成输入框
@@ -284,6 +287,14 @@ class LogAnalyzerApp:
         self.entry_time_start.insert(0, start_time)
         self.entry_time_end.insert(0, end_time)
 
+    def setup_default_status(self):
+        # 设置默认响应码
+        self.entry_status.insert(0, "200")
+
+    def setup_default_range(self):
+        # 设置默认行数范围
+        self.entry_range.insert(0, "1-1000")
+
     def analyze_log(self):
         if not self.log_lines:
             messagebox.showwarning("警告", "请先上传日志文件")
@@ -373,9 +384,14 @@ class LogAnalyzerApp:
             time_condition = True
             if start_time and end_time and time_log:
                 try:
-                    # 确保 time_log 是 offset-aware datetime
-                    if time_log.tzinfo is None:
+                    # 确保 time_log 是 datetime 对象
+                    if isinstance(time_log, str):
+                        time_log = datetime.strptime(time_log, "%Y-%m-%d %H:%M:%S")
+                    
+                    # 添加时区信息
+                    if not hasattr(time_log, 'tzinfo') or time_log.tzinfo is None:
                         time_log = pytz.UTC.localize(time_log)
+                        
                     time_condition = start_time <= time_log <= end_time
                 except Exception:
                     time_condition = False
