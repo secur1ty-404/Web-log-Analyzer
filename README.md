@@ -5,7 +5,7 @@
 [![PRs Welcome](https://img.shields.io/badge/PRs-%E6%AC%A2%E8%BF%8E%E6%8F%90%E4%BA%A4-brightgreen.svg)](https://github.com/m1nkit/web-log-analyzer/pulls)
 
 
-> 一款高效的Web服务器日志图形化分析工具，用于个人在应急响应中对Nignx Web服务器access日志的查询分析，支持多条件组合查询与智能过滤，访问IP地址的去重汇总与输出
+> 一款高效的Web服务器日志图形化分析工具，用于个人在应急响应中对多种Web日志（Nginx、Apache、IIS）的查询分析，支持多条件组合查询与智能过滤，访问IP地址的去重汇总与输出
 
 ## 目录 📚
 
@@ -91,16 +91,8 @@ python Analyzer.py
 #### 日志格式要求
 
 Nginx格式示例：
-114.248.123.45 - [15/Aug/2023:14:23:45 +0800] 200 0.002 1024 GET /index.html 61.129.156.123 10.10.10.1:8080 200 " -" 1.001
+111.222.123.45 - [15/Aug/2023:14:23:45 +0800] 200 0.002 1024 GET /index.html 111.222.456.123 10.10.10.11:8080 200 " -" 1.001
 
-必须包含字段：
-
-- [ ] 客户端IP
-- [ ] 时间戳（dd/MMM/yyyy:HH:mm:ss Z）
-- [ ] 状态码
-- [ ] 请求路径
-- [ ] 访问IP
-- [ ] 映射内网IP+端口
 
 #### 常见问题
 
