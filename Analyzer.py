@@ -6,6 +6,7 @@ import re
 from datetime import datetime, timedelta
 import pytz
 from AutocompleteEntry import AutocompleteEntry
+from log_parser import LogParser
 
 class LogAnalyzerApp:
     def __init__(self, root):
@@ -17,6 +18,7 @@ class LogAnalyzerApp:
         self.current_date = ""  # 新增：当前日期
         self.history_file = "search_history.txt"  # 新增： 查询关键词历史
         self.search_history = self.load_history()
+        self.log_parser = LogParser()  # 新增日志解析器
 
         self.create_widgets()
         self.setup_autocomplete()
@@ -30,6 +32,56 @@ class LogAnalyzerApp:
         # 配置文本标签样式
         self.text_result.tag_configure("bold", font=('TkDefaultFont', 10, 'bold'))
 
+    def upload_log(self):
+        filetypes = [
+            ("所有日志文件", "*.log;*.txt"),
+            ("Nginx日志", "*.log"),
+            ("Apache日志", "*.log"),
+            ("IIS日志", "*.log"),
+            ("文本文件", "*.txt"),
+        ]
+        filepath = filedialog.askopenfilename(filetypes=filetypes)
+        if filepath:
+            try:
+                filename = os.path.basename(filepath)
+                self.current_log_prefix = filename.split('.')[0]
+                self.current_date = datetime.now().strftime("%Y%m%d")
+                
+                # 使用生成器逐行读取，减少内存占用
+                self.log_lines = []
+                total_lines = 0
+                
+                # 创建进度条
+                progress = ttk.Progressbar(self.frame_upload, mode='determinate')
+                progress.pack(fill=tk.X, padx=5, pady=5)
+                
+                # 首次扫描获取总行数
+                with open(filepath, 'r', encoding='utf-8') as f:
+                    for _ in f:
+                        total_lines += 1
+                
+                # 读取文件并更新进度条
+                with open(filepath, 'r', encoding='utf-8') as f:
+                    for i, line in enumerate(f):
+                        self.log_lines.append(line)
+                        progress['value'] = (i + 1) / total_lines * 100
+                        self.root.update_idletasks()
+                
+                # 自动识别日志格式
+                log_format = self.log_parser.detect_format(self.log_lines[:10])
+                
+                status_msg = (f"已加载: {filename} ({log_format}) → "
+                            f"将生成 {self.current_log_prefix}_{self.current_date}.txt")
+                self.lbl_upload_status.config(text=status_msg, foreground="green")
+                
+                # 移除进度条
+                progress.destroy()
+                
+                
+            except Exception as e:
+                self.lbl_upload_status.config(text=f"加载失败: {str(e)}", foreground="red")
+
+                
     def create_widgets(self):
         # 文件上传区域
         self.frame_upload = ttk.LabelFrame(self.root, text="日志文件上传")
@@ -120,6 +172,7 @@ class LogAnalyzerApp:
         self.text_result.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         self.scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
         self.frame_result.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
+
 
     def upload_log(self):
         #文件上传功能
@@ -232,82 +285,58 @@ class LogAnalyzerApp:
         self.entry_time_end.insert(0, end_time)
 
     def analyze_log(self):
-        # 获取过滤条件
-        keyword = self.entry_keyword.get().strip()
-        exclude = self.entry_exclude.get().strip()
-        exclude_keyword = self.entry_keyword1.get().strip()
-        line_range = self.entry_range.get().strip()
+        if not self.log_lines:
+            messagebox.showwarning("警告", "请先上传日志文件")
+            return
+
+        # 获取输入值
+        include_keywords = [kw.strip() for kw in self.entry_keyword.get().split(',') if kw.strip()]
+        exclude_exts = [ext.strip().lower() for ext in self.entry_exclude.get().split(',') if ext.strip()]
+        exclude_keywords = [kw.strip() for kw in self.entry_keyword1.get().split(',') if kw.strip()]
         ip = self.entry_ip.get().strip()
-        backend_ports_input = self.entry_backend_ports.get().strip()
-        status = self.entry_status.get().strip()
-        start_time_str = self.entry_time_start.get().strip()
-        end_time_str = self.entry_time_end.get().strip()
-        include_keywords = [k.strip() for k in re.split(r'[,，\s]+', self.entry_keyword.get().strip()) if k.strip()]
-        exclude_keywords = [k.strip() for k in re.split(r'[,，\s]+', self.entry_keyword1.get().strip()) if k.strip()]
-
-        # 处理行数范围
-        start_line, end_line = 1, len(self.log_lines)
-        if line_range:
-            try:
-                start, end = map(int, line_range.split('-'))
-                start_line = max(1, start)
-                end_line = min(len(self.log_lines), end)
-            except:
-                messagebox.showerror("错误", "行数范围格式无效（示例：1-1000）")
-                return
-
-        # 处理排除扩展名
-        exclude_exts = [ext.strip().lstrip('.').lower() for ext in re.split(r'[/,，\s]+', exclude) if
-                        ext.strip()] if exclude else []
-
-        # 处理端口号
-        backend_ports = []
-        if backend_ports_input:
-            try:
-                backend_ports = [p.strip() for p in re.split(r'[,，\s]+', backend_ports_input)]
-            except ValueError:
-                messagebox.showerror("错误", "端口号必须为数字")
-                return
-
-        # 处理状态码
-        statuses = [s.strip() for s in status.split(',')] if status else []
+        backend_ports = [port.strip() for port in self.entry_backend_ports.get().split(',') if port.strip()]
+        statuses = [status.strip() for status in self.entry_status.get().split(',') if status.strip()]
 
         # 处理时间范围
-        start_time = end_time = None
-        if start_time_str or end_time_str:
-            if not (start_time_str and end_time_str):
-                messagebox.showerror("错误", "必须同时填写开始和结束时间")
-                return
-            try:
-                start_time = datetime.strptime(start_time_str, "%Y-%m-%d %H:%M:%S")
-                end_time = datetime.strptime(end_time_str, "%Y-%m-%d %H:%M:%S")
-            except Exception as e:
-                messagebox.showerror("错误", f"时间格式错误: {str(e)}")
-                return
+        start_time = None
+        end_time = None
+        try:
+            if self.entry_time_start.get().strip():
+                start_time = datetime.strptime(self.entry_time_start.get().strip(), "%Y-%m-%d %H:%M:%S")
+                start_time = pytz.UTC.localize(start_time)  # 添加 UTC 时区信息
+            if self.entry_time_end.get().strip():
+                end_time = datetime.strptime(self.entry_time_end.get().strip(), "%Y-%m-%d %H:%M:%S")
+                end_time = pytz.UTC.localize(end_time)  # 添加 UTC 时区信息
+        except ValueError as e:
+            messagebox.showerror("错误", f"时间格式错误: {str(e)}")
+            return
 
-        # 日志解析正则表达式（适配nginx拓展格式）
-        log_pattern = re.compile(
-            r'^(\S+)\s+\S+\s+\[([^]]+)\]\s+(\d+)\s+\d+\.\d+\s+\d+\s+(\S+)\s+(\S+)\s+(\S+):(\d+)\s+(\d+)\s+".*?"\s+\d+\.\d+$'
-        )
-        #    r'^(?P<client_ip>\S+)\s+\S+\s+\[(?P<timestamp>[^]]+)\]\s+'
-        #    r'(?P<front_status>\d+)\s+\d+\.\d+\s+\d+\s+'
-        #   r'(?P<path>\S+)\s+(?P<source_ip>\S+)\s+\S+:\d+\s+'
-        #   r'(?P<backend_status>\d+)\s+".*?"\s+\d+\.\d+$'
+        # 处理行数范围
+        try:
+            range_str = self.entry_range.get().strip()
+            if range_str:
+                start_line, end_line = map(int, range_str.split('-'))
+                end_line = min(end_line, len(self.log_lines))
+            else:
+                start_line, end_line = 1, len(self.log_lines)
+        except ValueError:
+            messagebox.showerror("错误", "行数范围格式错误，请使用如 1-1000 的格式")
+            return
 
         # 执行分析逻辑
         filtered_lines = []
         for i in range(start_line - 1, end_line):
             line = self.log_lines[i].strip()
-            match = log_pattern.match(line)
-            if not match:
+            parsed_log = self.log_parser.parse_line(line)
+            
+            if not parsed_log:
                 continue
 
             # 提取日志字段
-            time_log_str = match.group(2)
-            status_log = match.group(3)  # 状态码
-            url_log = match.group(4)  # 请求路径
-            ip_log = match.group(5)  # 访问IP
-            port = match.group(7)  # 端口号
+            time_log = parsed_log.get('timestamp')
+            status_log = parsed_log.get('status')
+            url_log = parsed_log.get('url')
+            ip_log = parsed_log.get('ip')
 
             # 条件判断
             # 关键词判断
@@ -317,13 +346,15 @@ class LogAnalyzerApp:
                     re.search(r'\b{}\b'.format(re.escape(keyword)), line, re.IGNORECASE)
                     for keyword in include_keywords
                 )
+
             # 排除后缀类型判断
             exclude_match = False
-            if exclude_exts:
+            if exclude_exts and url_log:
                 path_part = url_log.split('?')[0].split('#')[0]
                 filename = path_part.split('/')[-1]
                 extension = filename.split('.')[-1].lower() if '.' in filename else None
                 exclude_match = extension in exclude_exts
+
             # 排除关键词判断
             exclude_condition = False
             if exclude_keywords:
@@ -331,22 +362,22 @@ class LogAnalyzerApp:
                     re.search(r'\b{}\b'.format(re.escape(keyword)), line, re.IGNORECASE)
                     for keyword in exclude_keywords
                 )
+
             # 访问IP判断
             ip_condition = (ip_log == ip) if ip else True
+
             # 状态码判断
             status_condition = (status_log in statuses) if statuses else True
-            # 端口条件判断（新增）
-            port_condition = True
-            if backend_ports:
-                port_condition = port in backend_ports
+
             # 时间条件处理
             time_condition = True
-            if start_time and end_time:
+            if start_time and end_time and time_log:
                 try:
-                    log_time = datetime.strptime(time_log_str, "%d/%b/%Y:%H:%M:%S %z")
-                    log_time_naive = log_time.astimezone(pytz.utc).replace(tzinfo=None)
-                    time_condition = start_time <= log_time_naive <= end_time
-                except Exception as e:
+                    # 确保 time_log 是 offset-aware datetime
+                    if time_log.tzinfo is None:
+                        time_log = pytz.UTC.localize(time_log)
+                    time_condition = start_time <= time_log <= end_time
+                except Exception:
                     time_condition = False
 
             # 综合条件判断
@@ -356,7 +387,6 @@ class LogAnalyzerApp:
                 not exclude_condition,
                 ip_condition,
                 status_condition,
-                port_condition,
                 time_condition
             ]):
                 filtered_lines.append(line)
